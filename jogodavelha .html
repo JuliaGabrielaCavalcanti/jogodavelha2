@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jogo da Velha</title>
+<style>
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #ffc4ff;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+.container {
+    text-align: center;
+    background-color: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+h1 { font-size: 2.5rem; margin-bottom: 20px; }
+#inicio { display: block; }
+#jogo { display: none; position: relative; }
+#tabuleiro {
+    display: grid;
+    grid-template-columns: repeat(3,100px);
+    grid-gap: 5px;
+    margin: 20px auto;
+    position: relative;
+}
+.celula {
+    width:100px; height:100px;
+    display:flex; justify-content:center; align-items:center;
+    font-size:36px;
+    background-color:#eee;
+    border-radius:8px;
+    cursor:pointer;
+    transition: background-color 0.3s;
+}
+.celula:hover { background-color: #ddd; }
+.celula:active { background-color: #ccc; }
+#info { font-size:1.2rem; margin-top:10px; }
+.input-container { margin-top:20px; }
+.input-container input { padding:8px; font-size:1rem; border:2px solid #ccc; border-radius:8px; width:50px; text-align:center; }
+.input-container label { font-size:1rem; margin-right:10px; }
+button { padding:12px 25px; font-size:1.2rem; background-color:#760778; color:white; border:none; border-radius:8px; cursor:pointer; transition: background-color 0.3s; }
+button:hover { background-color:#ce2ac0; }
+button:disabled { background-color:#ccc; cursor:not-allowed; }
+.game-mode-btns { margin-top:20px; }
+.game-mode-btns button { margin:10px; }
+.modal { display:none; position:fixed; z-index:1; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.4); }
+.modal-content { background-color:white; padding:20px; border-radius:8px; text-align:center; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:80%; max-width:400px; }
+.modal-header { font-size:2rem; font-weight:bold; margin-bottom:10px; }
+.modal-body { font-size:1.5rem; margin-bottom:20px; }
+.close { color:#aaa; font-size:2rem; font-weight:bold; cursor:pointer; }
+.close:hover, .close:focus { color:black; text-decoration:none; cursor:pointer; }
+.instrucoes-btn { padding:6px 12px; font-size:1rem; background-color:#48C9B0; color:white; border:none; border-radius:5px; cursor:pointer; transition: background-color 0.3s; }
+.instrucoes-btn:hover { background-color:#1ABC9C; }
+.instrucoes-container { margin-top:20px; }
+
+/* Painel fim de jogo centralizado */
+#fimDeJogo {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1);
+    background-color: #fff;
+    border-radius: 12px;
+    padding: 40px 60px;
+    text-align: center;
+    box-shadow: 0px 10px 20px rgba(0,0,0,0.15);
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+#fimDeJogo h2 { font-size:3rem; margin-bottom:20px; color:#760778; }
+#fimDeJogo p { font-size:1.5rem; margin-top:10px; }
+
+/* Linha de vitória */
+.linha-vitoria {
+    position: absolute;
+    height: 5px;
+    background-color: red;
+    z-index: 10;
+    transform-origin: left center;
+    transition: width 0.5s ease, top 0.5s ease, left 0.5s ease, transform 0.5s ease;
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <div id="inicio">
+        <h1>Jogo da Velha</h1>
+        <div class="input-container">
+            <label for="rodadas">Escolha o número de rodadas:</label>
+            <input type="number" id="rodadas" min="1" max="10" value="3">
+        </div>
+        <div class="game-mode-btns">
+            <button onclick="selecionarModo('1vs1')">Multiplayer</button>
+            <button onclick="selecionarModo('bot')">Modo Contra o Bot</button>
+        </div>
+    </div>
+    <div class="instrucoes-container">
+        <button class="instrucoes-btn" onclick="exibirInstrucoes()">Instruções de Uso</button>
+    </div>
+
+    <div id="jogo">
+        <div id="info">
+            <p id="rodadasInfo">Rodadas: 3</p>
+            <p id="pontosX">Pontos X: 0</p>
+            <p id="pontosO">Pontos O: 0</p>
+        </div>
+        <div id="tabuleiro">
+            <div class="celula" onclick="marcar(0)"></div>
+            <div class="celula" onclick="marcar(1)"></div>
+            <div class="celula" onclick="marcar(2)"></div>
+            <div class="celula" onclick="marcar(3)"></div>
+            <div class="celula" onclick="marcar(4)"></div>
+            <div class="celula" onclick="marcar(5)"></div>
+            <div class="celula" onclick="marcar(6)"></div>
+            <div class="celula" onclick="marcar(7)"></div>
+            <div class="celula" onclick="marcar(8)"></div>
+        </div>
+    </div>
+</div>
+
+<div id="fimDeJogo">
+    <h2 id="mensagemFimDeJogo"></h2>
+    <p id="resultadoFinal">Obrigado por jogar!</p>
+    <button onclick="reiniciarJogo()">Jogar novamente</button>
+</div>
+
+<div id="instrucoesModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span class="close" onclick="fecharInstrucoes()">&times;</span>
+            <h2>Instruções</h2>
+        </div>
+        <div class="modal-body">
+            <p>1. Selecione o número de rodadas e o modo de jogo.</p>
+            <p>2. Jogue clicando nas células do tabuleiro.</p>
+            <p>3. Se todas as células forem preenchidas ou alguém vencer, a rodada acaba.</p>
+            <p>4. O número de rodadas será reduzido a cada final de partida.</p>
+            <p>5. O jogo terminará quando o número de rodadas for 0.</p>
+        </div>
+    </div>
+</div>
+
+<audio id="musicaFundo" loop><source src="musicadefundo.mp3" type="audio/mp3"></audio>
+<audio id="musicaVitoria"><source src="musicadevitoria.mp3" type="audio/mp3"></audio>
+
+<script>
+let jogador = 'X';
+let tabuleiro = ['','','','','','','','',''];
+let rodadas = parseInt(document.getElementById('rodadas').value);
+let pontosX = 0;
+let pontosO = 0;
+let modoJogo = '';
+let jogadorBot = 'O';
+let jogoAtivo = true;
+let ultimoVencedor = 'X';
+
+function selecionarModo(modo){
+    modoJogo = modo;
+    rodadas = parseInt(document.getElementById('rodadas').value);
+    document.getElementById('inicio').style.display='none';
+    document.getElementById('jogo').style.display='block';
+    atualizarInfo();
+    iniciarMusicaFundo();
+}
+
+// --- Música ---
+function iniciarMusicaFundo(){ document.getElementById('musicaFundo').play(); }
+function pararMusicaFundo(){ const m=document.getElementById('musicaFundo'); m.pause(); m.currentTime=0; }
+function tocarMusicaVitoria(){ const m=document.getElementById('musicaVitoria'); m.play(); }
+function pararMusicaVitoria(){ const m=document.getElementById('musicaVitoria'); m.pause(); m.currentTime=0; }
+
+function atualizarInfo(){
+    document.getElementById('rodadasInfo').innerText=`Rodadas: ${rodadas}`;
+    document.getElementById('pontosX').innerText=`Pontos X: ${pontosX}`;
+    document.getElementById('pontosO').innerText=`Pontos O: ${pontosO}`;
+}
+
+function marcar(pos){
+    if(!jogoAtivo || tabuleiro[pos]) return;
+    tabuleiro[pos] = jogador;
+    document.querySelectorAll('.celula')[pos].innerText = jogador;
+
+    if(verificarVitoria()){
+        ultimoVencedor = jogador;
+        if(jogador==='X') pontosX++; else pontosO++;
+        setTimeout(()=>{
+            if(rodadas>1){ rodadas--; resetarTabuleiro(); } 
+            else fimDeJogo(); 
+        }, 800);
+    } else if(tabuleiro.every(c=>c)){
+        setTimeout(()=>{
+            if(rodadas>1){ rodadas--; resetarTabuleiro(); } 
+            else fimDeJogo(); 
+        }, 800);
+    } else {
+        jogador = jogador==='X'?'O':'X';
+        if(modoJogo==='bot' && jogador===jogadorBot) setTimeout(jogadaBot,500);
+    }
+    atualizarInfo();
+}
+
+function fimDeJogo(){
+    const linha = document.querySelector('.linha-vitoria');
+    if(linha){ linha.style.width='0px'; setTimeout(()=>linha.remove(),300); }
+
+    let vencedor = pontosX>pontosO ? 'X' : pontosO>pontosX ? 'O' : 'Empate';
+    let mensagem = vencedor==='Empate' ? 'O jogo terminou em empate!' : `${vencedor} venceu!!`;
+
+    pararMusicaFundo();
+    if(vencedor!=='Empate') tocarMusicaVitoria();
+
+    setTimeout(()=>{
+        const painel = document.getElementById('fimDeJogo');
+        painel.style.display='block';
+        painel.style.opacity=0;
+        painel.style.transform='translate(-50%, -50%) scale(0.5)';
+        painel.style.zIndex=100;
+
+        setTimeout(()=>{
+            painel.style.opacity=1;
+            painel.style.transform='translate(-50%, -50%) scale(1)';
+        },50);
+
+        document.getElementById('mensagemFimDeJogo').innerText = mensagem;
+    },350);
+}
+
+function reiniciarJogo(){
+    rodadas = parseInt(document.getElementById('rodadas').value);
+    pontosX=0; pontosO=0;
+    pararMusicaVitoria();
+    resetarTabuleiro();
+    const painel = document.getElementById('fimDeJogo');
+    painel.style.display='none';
+    atualizarInfo();
+    iniciarMusicaFundo();
+}
+
+function resetarTabuleiro(){
+    const linha = document.querySelector('.linha-vitoria');
+    if(linha){ linha.style.width='0px'; setTimeout(()=>linha.remove(),300); }
+
+    tabuleiro = ['','','','','','','','',''];
+    document.querySelectorAll('.celula').forEach(c=>c.innerText='');
+    jogador = ultimoVencedor;
+    jogoAtivo=true;
+    if(modoJogo==='bot' && jogador===jogadorBot) setTimeout(jogadaBot,500);
+}
+
+function verificarVitoria(){
+    const vitorias = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    for(let comb of vitorias){
+        const [a,b,c] = comb;
+        if(tabuleiro[a] && tabuleiro[a]===tabuleiro[b] && tabuleiro[a]===tabuleiro[c]){
+            mostrarLinhaVitoria(comb);
+            return true;
+        }
+    }
+    return false;
+}
+
+function mostrarLinhaVitoria(comb){
+    const antiga = document.querySelector('.linha-vitoria'); if(antiga) antiga.remove();
+    const tab = document.getElementById('tabuleiro');
+    const celulas = document.querySelectorAll('.celula');
+    const linha = document.createElement('div'); linha.classList.add('linha-vitoria'); tab.appendChild(linha);
+
+    const primeiro = celulas[comb[0]].getBoundingClientRect();
+    const terceiro = celulas[comb[2]].getBoundingClientRect();
+    const tabRect = tab.getBoundingClientRect();
+    const offsetX = tabRect.left;
+    const offsetY = tabRect.top;
+
+    const x1 = primeiro.left + primeiro.width/2 - offsetX;
+    const y1 = primeiro.top + primeiro.height/2 - offsetY;
+    const x2 = terceiro.left + terceiro.width/2 - offsetX;
+    const y2 = terceiro.top + terceiro.height/2 - offsetY;
+
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const comprimento = Math.sqrt(dx*dx + dy*dy);
+    const angulo = Math.atan2(dy, dx) * (180/Math.PI);
+
+    linha.style.width='0px';
+    linha.style.top=`${y1}px`;
+    linha.style.left=`${x1}px`;
+    linha.style.transform=`rotate(${angulo}deg)`;
+
+    setTimeout(()=>linha.style.width=`${comprimento}px`,50);
+}
+
+function exibirInstrucoes(){ document.getElementById('instrucoesModal').style.display='block'; }
+function fecharInstrucoes(){ document.getElementById('instrucoesModal').style.display='none'; }
+
+// --- Bot Inteligente ---
+function jogadaBot(){
+    // 1. Tentar vencer
+    let j = encontrarJogadaVitoria(jogadorBot);
+    if(j !== -1){ marcar(j); return; }
+
+    // 2. Bloquear jogador
+    let adversario = jogadorBot==='X'?'O':'X';
+    j = encontrarJogadaVitoria(adversario);
+    if(j !== -1){ marcar(j); return; }
+
+    // 3. Priorizar centro
+    if(tabuleiro[4]===''){ marcar(4); return; }
+
+    // 4. Priorizar cantos
+    let cantos = [0,2,6,8].filter(c=>tabuleiro[c]==='');
+    if(cantos.length>0){ marcar(cantos[Math.floor(Math.random()*cantos.length)]); return; }
+
+    // 5. Qualquer posição vazia
+    j = tabuleiro.findIndex(c=>c==='');
+    if(j!==-1) marcar(j);
+}
+
+function encontrarJogadaVitoria(jogadorChecar){
+    const vitorias = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    for(let comb of vitorias){
+        const [a,b,c] = comb;
+        let line = [tabuleiro[a], tabuleiro[b], tabuleiro[c]];
+        if(line.filter(x=>x===jogadorChecar).length===2 && line.includes('')){
+            return comb[line.indexOf('')];
+        }
+    }
+    return -1;
+}
+</script>
+</body>
+
+</html>
